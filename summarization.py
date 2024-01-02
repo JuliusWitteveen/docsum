@@ -8,13 +8,14 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import config  # Import the config module
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Define default values for chunk size and overlap
-DEFAULT_CHUNK_SIZE = 10000
-DEFAULT_CHUNK_OVERLAP = 3000
+# Use values from config module instead of defining them here
+DEFAULT_CHUNK_SIZE = config.DEFAULT_CHUNK_SIZE
+DEFAULT_CHUNK_OVERLAP = config.DEFAULT_CHUNK_OVERLAP
 
 def split_text(text, chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP):
     try:
@@ -75,7 +76,7 @@ def process_chunk(doc, llm3_turbo, map_prompt_template):
 def generate_chunk_summaries(docs, selected_indices, openai_api_key, custom_prompt, max_workers=10):
     try:
         llm3_turbo = ChatOpenAI(temperature=0, openai_api_key=openai_api_key, max_tokens=4096, model='gpt-3.5-turbo-16k')
-        map_prompt_template = PromptTemplate(template=f"```{{text}}```\n{custom_prompt}", input_variables=["text"])
+        map_prompt_template = PromptTemplate(template=f"```{{text}}```\\n{custom_prompt}", input_variables=["text"])
         summary_list = []
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -97,7 +98,7 @@ def generate_chunk_summaries(docs, selected_indices, openai_api_key, custom_prom
         logging.error(f"Error in generating chunk summaries: {e}")
         raise
 
-def generate_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, progress_update_callback=None):
+def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, progress_update_callback=None):
     try:
         # Split the text into chunks
         docs = split_text(text, chunk_size, chunk_overlap)
