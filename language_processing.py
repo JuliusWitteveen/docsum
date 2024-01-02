@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------
+# language_processing.py
+# -------------------------------------------------------------------
+
 from langdetect import detect
 from translate import Translator
 import logging
