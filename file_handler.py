@@ -7,9 +7,14 @@ import logging
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
+import config  # Import the config module
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Use values from config module
+SUPPORTED_FILE_FORMATS = config.SUPPORTED_FILE_FORMATS
+SUMMARY_SAVE_PATH = config.SUMMARY_SAVE_PATH
 
 def is_valid_file_path(path):
     """
