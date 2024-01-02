@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import os
+import config  # Import the config module
 
 # Global variables
 selected_file_path = None
@@ -17,10 +18,10 @@ chunk_overlap = None
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Set default prompt in English and default values for chunk size and overlap
-default_prompt_en = """Summarize the text concisely and directly without prefatory phrases. Focus on presenting its key points and main ideas, ensuring that essential details are accurately conveyed in a straightforward manner."""
-DEFAULT_CHUNK_SIZE = 10000
-DEFAULT_CHUNK_OVERLAP = 3000
+# Use values from config module
+default_prompt_en = config.DEFAULT_PROMPT_EN
+DEFAULT_CHUNK_SIZE = config.DEFAULT_CHUNK_SIZE
+DEFAULT_CHUNK_OVERLAP = config.DEFAULT_CHUNK_OVERLAP
 
 # Helper Functions
 def get_api_key(file_path=r'C:\\api_key.txt'):
@@ -74,7 +75,7 @@ def start_summarization(root):
             user_chunk_size = int(chunk_size.get() or DEFAULT_CHUNK_SIZE)
             user_chunk_overlap = int(chunk_overlap.get() or DEFAULT_CHUNK_OVERLAP)
 
-            summary = summarization.generate_summary(
+            summary = summarization.execute_summary(
                 text, 
                 api_key, 
                 custom_prompt_text,
@@ -116,7 +117,6 @@ def save_summary_file(summary, filename_without_ext):
         messagebox.showinfo("Success", f"Summary saved successfully to {file_path}")
     else:
         messagebox.showerror("Error", "No file path selected.")
-
 
 # GUI Code Block
 def main_gui():
