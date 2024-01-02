@@ -1,9 +1,14 @@
 from langdetect import detect
 from translate import Translator
 import logging
+import config  # Import the config module
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Use values from config module
+SUPPORTED_LANGUAGES = config.SUPPORTED_LANGUAGES
+DEFAULT_TRANSLATION_LANGUAGE = config.DEFAULT_TRANSLATION_LANGUAGE
 
 def detect_language(text):
     """
@@ -41,7 +46,7 @@ def translate_prompt(prompt_text, target_language):
         Currently supports translation to Dutch ('nl') and English ('en') using the 'translate' library.
         Logs a message if the target language is not supported.
     """
-    if target_language not in ["nl", "en"]:
+    if target_language not in SUPPORTED_LANGUAGES:
         logging.warning(f"Translation not supported for language: {target_language}")
         return prompt_text
 
