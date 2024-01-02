@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------
+# summarization.py
+# -------------------------------------------------------------------
+
 import logging
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
