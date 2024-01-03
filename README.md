@@ -2,16 +2,7 @@
 
 Docsum is an application designed to automate the summarization of documents. It supports various file formats such as PDF, DOCX, RTF, and TXT, leveraging Natural Language Processing (NLP) and machine learning techniques. The project is structured modularly and incorporates multithreading and asynchronous programming elements.
 
-## Features
-
-- **Multiple File Formats**: Docsum supports PDF, DOCX, RTF, and TXT files.
-- **Advanced Text Processing**: Utilizing NLP and machine learning techniques for summarization.
-- **Language Detection and Translation**: Automatically detects and translates content based on the document's language.
-- **Summarization**: Employs clustering techniques and OpenAI's GPT-3.5 model for generating concise summaries.
-- **GUI**: Features a Tkinter-based graphical user interface.
-- **Progress Tracking**: Provides visual progress indicators during the summarization process.
-
-### Main Components
+### Modules
 
 - `main.py`: The primary entry point of the application.
 - `summarization.py`: Responsible for handling the summarization logic.
@@ -20,8 +11,6 @@ Docsum is an application designed to automate the summarization of documents. It
 - `config.py`: Contains configuration settings for the application.
 
 ## main.py
-
-### Overview
 
 - main.py features a user-friendly GUI for document selection, prompt customization, and summary saving.
 - It seamlessly integrates multiple modules (`file_handler`, `language_processing`, `summarization`) for different functionalities.
@@ -58,10 +47,8 @@ Docsum is an application designed to automate the summarization of documents. It
 
 ## summarization.py
 
-### Overview
-
-- This module is well-structured and modular, with clear separation of functionalities.
-- It leverages advanced techniques like text embeddings, clustering, and large language models (LLMs) for summarization.
+- Structured module, with clear separation of functionalities.
+- Lverages advanced techniques like text embeddings, clustering, and large language models (LLMs) for summarization.
 - Parallel processing is used for efficiency, especially important for handling large documents.
 - A progress callback is used for real-time progress bar updates.
 
@@ -72,35 +59,39 @@ Docsum is an application designed to automate the summarization of documents. It
    - Contains the core logic for text summarization.
    - Includes functions for breaking down text into manageable chunks, applying summarization algorithms, and compiling the final summary.
 
-2.1. **Text Splitting (`split_text`)**:
-   - Splits the input text into smaller chunks using `RecursiveCharacterTextSplitter`.
-   - Handles different separators like newlines and tabs.
-   - Configurable chunk size and overlap, using values from `config.py`.
+2.1. **Text Splitting (split_text)**:
 
-2.2. **Text Embedding (`embed_text`)**:
-   - Converts text chunks into embeddings using `OpenAIEmbeddings`.
-   - Embeddings are likely used for clustering and summarization.
+Purpose: Splits the input text into smaller chunks.
+Implementation: Uses RecursiveCharacterTextSplitter to divide the text based on specified separators (like newlines and tabs), chunk size, and overlap. This ensures that the text is broken down into manageable parts for further processing.
 
-2.3. **Optimal Clusters Determination (`determine_optimal_clusters`)**:
-   - Utilizes KMeans clustering and the `KneeLocator` to find the optimal number of clusters in the embeddings.
-   - This step is crucial for efficient summarization.
+2.2. **Text Embedding (embed_text)**:
 
-2.4. **Clustering Embeddings (`cluster_embeddings`)**:
-   - Clusters the embeddings and identifies key chunks for summarization.
+Purpose: Converts text chunks into vector embeddings.
+Implementation: Employs OpenAIEmbeddings to transform each text chunk into a vector representation. This step is essential for converting textual data into a format that can be processed by machine learning algorithms for clustering.
 
-2.5. **Chunk Processing (`process_chunk`)**:
-   - Summarizes individual text chunks using a loaded summarization chain.
-   - Logs the first 100 characters of each processed chunk.
+2.3. **Optimal Clusters Determination (determine_optimal_clusters)**:
 
-2.6. **Generating Chunk Summaries (`generate_chunk_summaries`)**:
-   - Summarizes selected text chunks in parallel using `ThreadPoolExecutor`.
-   - Utilizes `ChatOpenAI` for summarization, with a custom prompt template.
-   - Logs summaries and handles errors during summarization.
+Purpose: Finds the optimal number of clusters for the embeddings.
+Implementation: Uses KMeans clustering to calculate the sum of squared distances for different cluster counts. The KneeLocator is then used to find the elbow point in the SSE curve, which indicates the most appropriate number of clusters.
 
-2.7. **Executing Summary (`execute_summary`)**:
-   - Orchestrates the entire summarization process, including text splitting, embedding, clustering, and summarizing.
-   - Optionally updates a progress callback.
-   - Concatenates and logs the final summary.
+2.4. **Clustering Embeddings (cluster_embeddings)**:
+
+Purpose: Clusters the embeddings into groups.
+Implementation: Applies KMeans clustering to the embeddings. It then identifies the closest text chunk to each cluster center, selecting the most representative chunks for summarization.
+
+2.5. **Chunk Processing (process_chunk)**:
+
+Purpose: Summarizes individual text chunks.
+Implementation: Utilizes a summarization chain loaded through loadSummarizationChain, creating a chain of operations involving language models for generating a summary of each chunk. The specific chain used depends on the parameters passed, which could involve different summarization strategies like 'stuff', 'map_reduce', or 'refine'.
+2.6. **Generating Chunk Summaries (generate_chunk_summaries)**:
+
+Purpose: Summarizes selected chunks in parallel.
+Implementation: Uses ThreadPoolExecutor for parallel processing and ChatOpenAI for summarization. It applies a custom prompt template to guide the summarization, ensuring consistency and alignment with the desired output.
+
+2.7. **Executing Summary (execute_summary)**:
+
+Purpose: Manages the overall summarization process.
+Implementation: Coordinates the entire summarization workflow, including text splitting, embedding, clustering, and summarizing. It also provides optional progress updates for user interface integration.
 
 3. **Error Handling and Logging**:
    - Robust error handling to manage exceptions during the summarization process.
@@ -112,8 +103,6 @@ Docsum is an application designed to automate the summarization of documents. It
 
 
 ## file_handler.py
-
-### Overview
 
 - This module abstracts file operations effectively, simplifying the loading and saving of documents in various formats.
 - It relies on external libraries such as PyMuPDF, python-docx, striprtf, and ReportLab to handle specific file formats.
@@ -138,8 +127,6 @@ Docsum is an application designed to automate the summarization of documents. It
 
 ## language_processing.py
 
-### Overview
-
 - This module effectively integrates language detection and translation functionalities, enhancing the application's ability to process documents in different languages.
 - It relies on external libraries (`langdetect` and `translate`) for core functionalities.
 - The module is designed to gracefully handle failures in language detection and translation, ensuring the application's robustness.
@@ -158,8 +145,6 @@ Docsum is an application designed to automate the summarization of documents. It
    - Includes error handling and logging for translation issues.
 
 ## config.py
-
-### Overview
 
 - `config.py` centralizes essential settings, making it convenient to manage and modify configuration values without altering the core application code.
 - It provides insights into the application's language support, supported file formats, and summarization preferences.
