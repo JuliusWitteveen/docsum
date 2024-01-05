@@ -1,6 +1,12 @@
 # -------------------------------------------------------------------
 # summarization.py
 # -------------------------------------------------------------------
+"""
+The summarization module implements the core functionality for summarizing text documents.
+It utilizes libraries like langchain, sklearn, numpy, and kneed for various tasks such as text splitting,
+embedding, clustering, and summarization using language models. This module is closely tied to the main application
+flow in 'main.py' and relies on configuration settings from the 'config' module.
+"""
 
 import logging
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -18,19 +24,54 @@ import config  # Import the config module
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Use values from config module instead of defining them here
+# 'DEFAULT_CHUNK_SIZE' and 'DEFAULT_CHUNK_OVERLAP' are configuration values imported from the 'config' module.
+# They define default parameters for the text splitting process in the summarization.
 DEFAULT_CHUNK_SIZE = config.DEFAULT_CHUNK_SIZE
 DEFAULT_CHUNK_OVERLAP = config.DEFAULT_CHUNK_OVERLAP
 
 def split_text(text, chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP):
+    """
+    Splits the input text into manageable chunks based on the specified chunk size and overlap.
+
+    This function is a preparatory step in the summarization process, enabling handling of large texts
+    by breaking them into smaller parts. It is used in the 'execute_summary' function.
+
+    Args:
+        text (str): The text to be split.
+        chunk_size (int): The size of each chunk.
+        chunk_overlap (int): The overlap between chunks.
+
+    Returns:
+        list: A list of tuples containing the chunk of text and its sequence index.
+
+    Raises an exception if the text splitting process encounters an error.
+    """
     try:
         text_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n", "\t"], chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         docs = text_splitter.create_documents([text])
-        return docs
+        # Adding sequence identifiers to each chunk
+        docs_with_id = [(doc, idx) for idx, doc in enumerate(docs)]
+        return docs_with_id
     except Exception as e:
         logging.error(f"Error during text splitting: {e}")
         raise
 
 def embed_text(docs, openai_api_key):
+    """
+    Embeds the provided text documents using OpenAI embeddings.
+
+    This function is a crucial part of the summarization process, where it transforms
+    the text chunks into vector representations for further clustering analysis.
+
+    Args:
+        docs (list): A list of text documents to be embedded.
+        openai_api_key (str): The API key for accessing OpenAI services.
+
+    Returns:
+        list: A list of vector embeddings for the provided documents.
+
+    Raises an exception if the embedding process encounters an error.
+    """
     try:
         embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
         vectors = embeddings.embed_documents([x.page_content for x in docs])
@@ -40,6 +81,21 @@ def embed_text(docs, openai_api_key):
         raise
 
 def determine_optimal_clusters(vectors, max_clusters=100):
+    """
+    Determines the optimal number of clusters for KMeans clustering of the text embeddings.
+
+    This function is essential for identifying the best way to group text chunks based on
+    their embeddings, which aids in creating a concise summary.
+
+    Args:
+        vectors (list): A list of vector embeddings.
+        max_clusters (int): The maximum number of clusters to consider.
+
+    Returns:
+        int: The optimal number of clusters.
+
+    Raises an exception if there's an error in determining the optimal clusters.
+    """
     try:
         num_samples = len(vectors)
         if num_samples == 0:
@@ -59,6 +115,21 @@ def determine_optimal_clusters(vectors, max_clusters=100):
         raise
 
 def cluster_embeddings(vectors, num_clusters):
+    """
+    Clusters the provided embeddings into the specified number of clusters.
+
+    After determining the optimal number of clusters, this function groups the embeddings,
+    which is a step towards identifying key chunks for summarization.
+
+    Args:
+        vectors (list): The vector embeddings to be clustered.
+        num_clusters (int): The number of clusters to form.
+
+    Returns:
+        list: Indices of the closest embeddings to the cluster centers.
+
+    Raises an exception if the clustering process encounters an error.
+    """
     try:
         kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10).fit(vectors)
         closest_indices = [np.argmin(np.linalg.norm(vectors - center, axis=1)) for center in kmeans.cluster_centers_]
@@ -68,6 +139,22 @@ def cluster_embeddings(vectors, num_clusters):
         raise
 
 def process_chunk(doc, llm3_turbo, map_prompt_template):
+    """
+    Processes a single text chunk for summarization using a language model.
+
+    Each text chunk is individually summarized using the provided language model and prompt template.
+    This function is part of the parallelized summarization process.
+
+    Args:
+        doc (str): The text chunk to be summarized.
+        llm3_turbo (ChatOpenAI): The language model used for summarization.
+        map_prompt_template (PromptTemplate): The template for summarization prompts.
+
+    Returns:
+        str: The summarized text of the chunk.
+
+    Logs the first 100 characters of the processed chunk and raises an exception if an error occurs.
+    """
     try:
         summary = load_summarize_chain(llm=llm3_turbo, chain_type="stuff", prompt=map_prompt_template).run([doc])
         # Log the first 100 characters of the processed chunk
@@ -77,40 +164,76 @@ def process_chunk(doc, llm3_turbo, map_prompt_template):
         logging.error(f"Error summarizing document chunk: {e}")
         return ""
 
-def generate_chunk_summaries(docs, selected_indices, openai_api_key, custom_prompt, max_workers=10):
+def generate_chunk_summaries(docs_with_id, selected_indices, openai_api_key, custom_prompt, max_workers=10):
+    """
+    Generates summaries for selected chunks of text in parallel.
+
+    This function orchestrates the summarization of multiple text chunks, utilizing a ThreadPoolExecutor
+    for parallel processing. It is a crucial part of the overall summarization workflow.
+
+    Args:
+        docs_with_id (list): A list of tuples containing text chunks and their indices.
+        selected_indices (list): Indices of the chunks to be summarized.
+        openai_api_key (str): The API key for OpenAI services.
+        custom_prompt (str): The custom prompt for the summarization.
+        max_workers (int): The maximum number of threads for parallel processing.
+
+    Returns:
+        list: A list of tuples containing the chunk index and its summary.
+
+    Raises an exception if there's an error in the parallel summarization process.
+    """
     try:
         llm3_turbo = ChatOpenAI(temperature=0, openai_api_key=openai_api_key, max_tokens=4096, model='gpt-3.5-turbo-16k')
         map_prompt_template = PromptTemplate(template=f"```{{text}}```\\n{custom_prompt}", input_variables=["text"])
-        summary_list = []
-
+        
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_doc = {executor.submit(process_chunk, docs[i], llm3_turbo, map_prompt_template): i for i in selected_indices}
-            for future in as_completed(future_to_doc):
-                index = future_to_doc[future]
+            future_to_id = {executor.submit(process_chunk, docs_with_id[i][0], llm3_turbo, map_prompt_template): docs_with_id[i][1] for i in selected_indices}
+            summary_list = []
+
+            for future in as_completed(future_to_id):
+                doc_id = future_to_id[future]
                 try:
                     chunk_summary = future.result()
                     if not isinstance(chunk_summary, str):
                         chunk_summary = str(chunk_summary)  # Convert to string if not already
-                        logging.info(f"Converted chunk {index} summary to string.")
-                    logging.info(f"Chunk {index} Summary: {chunk_summary[:100]}...")  # Log first 100 characters of the summary
-                    summary_list.append(chunk_summary)
+                    logging.info(f"Chunk {doc_id} Summary: {chunk_summary[:100]}...")  # Log first 100 characters of the summary
+                    summary_list.append((doc_id, chunk_summary))
                 except Exception as e:
-                    logging.error(f"Error summarizing document chunk at index {index}: {e}")
-
+                    logging.error(f"Error summarizing document chunk at index {doc_id}: {e}")
         return summary_list
     except Exception as e:
         logging.error(f"Error in generating chunk summaries: {e}")
         raise
 
 def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, progress_update_callback=None):
+    """
+    Orchestrates the entire summarization process, integrating various steps from text splitting to final summary generation.
+
+    This function is the main entry point for the summarization process, called from 'main.py'.
+    It sequentially executes text splitting, embedding, clustering, and summarizing, providing updates via the callback function.
+
+    Args:
+        text (str): The text to summarize.
+        api_key (str): The API key for OpenAI services.
+        custom_prompt (str): The custom prompt for guiding the summarization.
+        chunk_size (int): The size of text chunks.
+        chunk_overlap (int): The overlap between text chunks.
+        progress_update_callback (function): A callback function for progress updates.
+
+    Returns:
+        str: The final summarized text.
+
+    Raises an exception if any step in the summarization process fails.
+    """
     try:
         # Split the text into chunks
-        docs = split_text(text, chunk_size, chunk_overlap)
+        docs_with_id = split_text(text, chunk_size, chunk_overlap)
         if progress_update_callback:
             progress_update_callback(30)
 
         # Embed the text chunks
-        vectors = embed_text(docs, api_key)
+        vectors = embed_text([doc[0] for doc in docs_with_id], api_key)
         if progress_update_callback:
             progress_update_callback(40)
 
@@ -120,15 +243,11 @@ def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, pro
             progress_update_callback(50)
 
         # Generate summaries for each chunk
-        summaries = generate_chunk_summaries(docs, range(len(docs)), api_key, custom_prompt)
+        summaries_with_id = generate_chunk_summaries(docs_with_id, range(len(docs_with_id)), api_key, custom_prompt)
 
-        # Manually concatenate the summaries
-        final_summary = ""
-        for summary in summaries:
-            final_summary += summary + "\n\n"
-
-        # Trim the last two newline characters
-        final_summary = final_summary.rstrip("\n")
+        # Sorting summaries based on their sequence identifier
+        summaries_with_id.sort(key=lambda x: x[0])
+        final_summary = "\n\n".join([summary for _, summary in summaries_with_id])
 
         if progress_update_callback:
             progress_update_callback(90)
