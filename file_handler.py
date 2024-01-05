@@ -1,6 +1,9 @@
 # -------------------------------------------------------------------
 # file_handler.py
 # -------------------------------------------------------------------
+"""
+The file_handler module provides functionality for loading and saving documents. It supports multiple file formats, including PDF, DOCX, RTF, and TXT. This module interacts with external modules such as PyMuPDF, striprtf, and reportlab for handling specific file formats. It also uses the 'config' module for configuration values like supported file formats and summary save paths.
+"""
 
 import os
 import re
@@ -14,15 +17,22 @@ from reportlab.lib.pagesizes import letter
 import config  # Import the config module
 
 # Configure logging
+# Logging is used extensively for debugging and tracking the module's execution,
+# especially in error scenarios and during critical operations like file loading and saving.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Use values from config module
+# 'SUPPORTED_FILE_FORMATS' and 'SUMMARY_SAVE_PATH' are configuration values imported from the 'config' module.
+# These are used to determine the formats that can be loaded and saved, and the default path for saving summaries.
 SUPPORTED_FILE_FORMATS = config.SUPPORTED_FILE_FORMATS
 SUMMARY_SAVE_PATH = config.SUMMARY_SAVE_PATH
 
 def is_valid_file_path(path):
     """
-    Validates the given file path.
+    Validates the file path using a regular expression and checks if the file exists.
+
+    This function is used internally in the 'load_document' function to ensure the file path is valid
+    and the file exists before attempting to load it.
 
     Args:
         path (str): The file path to validate.
@@ -41,7 +51,10 @@ def is_valid_file_path(path):
 
 def load_document(file_path):
     """
-    Loads a document from the given file path.
+    Loads and returns the text content of a document. It supports PDF, DOCX, RTF, and TXT files.
+
+    This function is used externally, primarily in the 'main.py' module for loading the document to be summarized.
+    It interacts with 'is_valid_file_path' for file path validation and different libraries for handling various file formats.
 
     Args:
         file_path (str): The path of the file to load.
@@ -51,6 +64,8 @@ def load_document(file_path):
 
     Raises:
         ValueError: If the file path is invalid or the file extension is unsupported.
+
+    Exceptions are logged, and a ValueError is raised for unsupported file formats.
     """
     if not is_valid_file_path(file_path):
         raise ValueError(f"Invalid file path: {file_path}")
