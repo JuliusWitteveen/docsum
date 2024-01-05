@@ -19,15 +19,12 @@ import os
 import config  # Import the config module
 
 # Global variables
-# 'selected_file_path' holds the path of the file selected by the user for summarization.
-selected_file_path = None
-# 'progress' refers to the progress bar widget in the GUI, showing the summarization progress.
-progress = None
-# 'custom_prompt_area' is a text area in the GUI for customizing the summarization prompt.
-custom_prompt_area = None
-# 'chunk_size' and 'chunk_overlap' are user-configurable settings for text chunking in the summarization process.
-chunk_size = None
+selected_file_path = None  # holds the path of the file selected by the user for summarization.
+progress = None  # refers to the progress bar widget in the GUI, showing the summarization progress.
+custom_prompt_area = None  # is a text area in the GUI for customizing the summarization prompt.
+chunk_size = None  # user-configurable settings for text chunking in the summarization process.
 chunk_overlap = None
+use_clustering = None  # BooleanVar for clustering option in the GUI.
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -121,7 +118,7 @@ def start_summarization_thread(root):
     summarization_thread.start()
 
 def start_summarization(root):
-    global selected_file_path, custom_prompt_area, chunk_size, chunk_overlap
+    global selected_file_path, custom_prompt_area, chunk_size, chunk_overlap, use_clustering
     api_key = get_api_key()
     if api_key and selected_file_path:
         try:
@@ -133,6 +130,8 @@ def start_summarization(root):
 
             user_chunk_size = int(chunk_size.get() or DEFAULT_CHUNK_SIZE)
             user_chunk_overlap = int(chunk_overlap.get() or DEFAULT_CHUNK_OVERLAP)
+            
+            logging.info(f"Clustering option selected: {use_clustering.get()}")  # Debug log
 
             summary = summarization.execute_summary(
                 text, 
@@ -140,6 +139,7 @@ def start_summarization(root):
                 custom_prompt_text,
                 user_chunk_size,
                 user_chunk_overlap,
+                use_clustering=use_clustering.get(),
                 progress_update_callback=lambda value: update_progress_bar(value, root)
             )
 
@@ -188,15 +188,14 @@ def save_summary_file(summary, filename_without_ext):
 
 # GUI Code Block
 def main_gui():
-    global selected_file_path, progress, custom_prompt_area, chunk_size, chunk_overlap
+    global selected_file_path, progress, custom_prompt_area, chunk_size, chunk_overlap, use_clustering
 
     logging.info("Initializing GUI for the Document Summarizer.")
-    # Initialize the main window of the application with full-screen size and basic styling.
+    
     root = tk.Tk()
     root.title("Document Summarizer")
     root.state('zoomed')  # Full-screen window
 
-    # Configure styles and colors for the UI components for consistency and readability.
     primary_color = "#2E3F4F"
     secondary_color = "#4F5D75"
     text_color = "#E0FBFC"
@@ -209,22 +208,18 @@ def main_gui():
     style.configure('W.TButton', font=button_font, background=button_color, foreground=text_color)
     style.map('W.TButton', background=[('active', secondary_color)], foreground=[('active', text_color)])
 
-    # Configure layout of the main window
     root.configure(bg=primary_color)
     root.grid_columnconfigure(0, weight=1)
     root.grid_rowconfigure(1, weight=1)
 
-    # Progress bar to indicate summarization progress
     progress = ttk.Progressbar(root, orient=tk.HORIZONTAL, length=300, mode='determinate')
     progress.grid(row=0, column=0, pady=10, padx=10, sticky='ew')
 
-    # Customizable prompt box for user input
     prompt_label = tk.Label(root, text="Customize the summarization prompt:", fg=text_color, bg=primary_color, font=larger_font)
     prompt_label.grid(row=1, column=0, pady=(10, 0), sticky='nw')
     custom_prompt_area = tk.Text(root, height=15, width=80, wrap="word", bd=2, font=larger_font)
     custom_prompt_area.grid(row=2, column=0, pady=10, padx=10, sticky='nsew')
 
-    # Chunk Size and Overlap Input Fields
     chunk_size = tk.StringVar(value=str(DEFAULT_CHUNK_SIZE))
     chunk_overlap = tk.StringVar(value=str(DEFAULT_CHUNK_OVERLAP))
 
@@ -237,6 +232,12 @@ def main_gui():
     chunk_overlap_label.grid(row=4, column=0, pady=(10, 0), sticky='nw')
     chunk_overlap_entry = tk.Entry(root, textvariable=chunk_overlap, bd=2, font=larger_font)
     chunk_overlap_entry.grid(row=4, column=1, pady=10, padx=10, sticky='nsew')
+
+    # Initialize use_clustering here
+    use_clustering = tk.BooleanVar(value=False)
+
+    clustering_check = tk.Checkbutton(root, text="Use Clustering", variable=use_clustering, onvalue=True, offvalue=False, fg=text_color, bg=primary_color, font=larger_font)
+    clustering_check.grid(row=7, column=0, pady=10, padx=10, sticky='w')
 
     # Function for file selection
     def file_select():
@@ -277,7 +278,7 @@ def main_gui():
     summarize_button = ttk.Button(root, text="Start Summarization", command=lambda: start_summarization_thread(root), style='W.TButton')
     summarize_button.grid(row=6, column=0, pady=20, padx=10, sticky='ew')
 
-    root.mainloop()  # This line starts the Tkinter event loop
+    root.mainloop()
 
 # Script Execution Block
 # This block is the entry point of the application. It initializes the GUI and starts the application.
