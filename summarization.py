@@ -2,10 +2,7 @@
 # summarization.py
 # -------------------------------------------------------------------
 """
-The summarization module implements the core functionality for summarizing text documents.
-It utilizes libraries like langchain, sklearn, numpy, and kneed for various tasks such as text splitting,
-embedding, clustering, and summarization using language models. This module is closely tied to the main application
-flow in 'main.py' and relies on configuration settings from the 'config' module.
+The summarization module implements the core functionality for summarizing text documents. It utilizes libraries like langchain, sklearn, numpy, and kneed for various tasks such as text splitting, embedding, clustering, and summarization using language models. This module is closely tied to the main application flow in 'main.py' and relies on configuration settings from the 'config' module.
 """
 
 import logging
@@ -206,26 +203,7 @@ def generate_chunk_summaries(docs_with_id, selected_indices, openai_api_key, cus
         logging.error(f"Error in generating chunk summaries: {e}")
         raise
 
-def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, progress_update_callback=None):
-    """
-    Orchestrates the entire summarization process, integrating various steps from text splitting to final summary generation.
-
-    This function is the main entry point for the summarization process, called from 'main.py'.
-    It sequentially executes text splitting, embedding, clustering, and summarizing, providing updates via the callback function.
-
-    Args:
-        text (str): The text to summarize.
-        api_key (str): The API key for OpenAI services.
-        custom_prompt (str): The custom prompt for guiding the summarization.
-        chunk_size (int): The size of text chunks.
-        chunk_overlap (int): The overlap between text chunks.
-        progress_update_callback (function): A callback function for progress updates.
-
-    Returns:
-        str: The final summarized text.
-
-    Raises an exception if any step in the summarization process fails.
-    """
+def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, use_clustering=False, progress_update_callback=None):
     try:
         # Split the text into chunks
         docs_with_id = split_text(text, chunk_size, chunk_overlap)
@@ -237,13 +215,19 @@ def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, pro
         if progress_update_callback:
             progress_update_callback(40)
 
-        # Determine the optimal number of clusters
-        num_clusters = determine_optimal_clusters(vectors)
+        if use_clustering:
+            logging.info("Applying clustering for summarization.")
+            num_clusters = determine_optimal_clusters(vectors)
+            selected_indices = cluster_embeddings(vectors, num_clusters)
+        else:
+            logging.info("Summarizing without clustering.")
+            selected_indices = range(len(docs_with_id))
+
         if progress_update_callback:
             progress_update_callback(50)
 
-        # Generate summaries for each chunk
-        summaries_with_id = generate_chunk_summaries(docs_with_id, range(len(docs_with_id)), api_key, custom_prompt)
+        # Generate summaries for selected chunks
+        summaries_with_id = generate_chunk_summaries(docs_with_id, selected_indices, api_key, custom_prompt)
 
         # Sorting summaries based on their sequence identifier
         summaries_with_id.sort(key=lambda x: x[0])
@@ -252,7 +236,6 @@ def execute_summary(text, api_key, custom_prompt, chunk_size, chunk_overlap, pro
         if progress_update_callback:
             progress_update_callback(90)
 
-        # Log the first 500 characters of the final summary
         logging.info(f"Final Summary (first 500 characters): {final_summary[:500]}...")
 
         return final_summary
