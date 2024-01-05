@@ -1,6 +1,12 @@
 # -------------------------------------------------------------------
 # main.py
 # -------------------------------------------------------------------
+"""
+The main module of the Document Summarizer application. This module integrates the functionalities of file handling, 
+language processing, and summarization into a user-friendly GUI. It is responsible for the main application flow, 
+including file selection, language detection, summarization, and saving the summarized document. It relies on the 
+'file_handler', 'language_processing', and 'summarization' modules, as well as configuration settings from 'config'.
+"""
 
 import file_handler
 import language_processing
@@ -13,22 +19,40 @@ import os
 import config  # Import the config module
 
 # Global variables
+# 'selected_file_path' holds the path of the file selected by the user for summarization.
 selected_file_path = None
+# 'progress' refers to the progress bar widget in the GUI, showing the summarization progress.
 progress = None
+# 'custom_prompt_area' is a text area in the GUI for customizing the summarization prompt.
 custom_prompt_area = None
+# 'chunk_size' and 'chunk_overlap' are user-configurable settings for text chunking in the summarization process.
 chunk_size = None
 chunk_overlap = None
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Use values from config module
+# Import configuration settings from config module for default prompts, chunk size, and overlap.
+# These settings are used throughout the application to control various aspects of the summarization process.
 default_prompt_en = config.DEFAULT_PROMPT_EN
 DEFAULT_CHUNK_SIZE = config.DEFAULT_CHUNK_SIZE
 DEFAULT_CHUNK_OVERLAP = config.DEFAULT_CHUNK_OVERLAP
 
 # Helper Functions
 def get_api_key(file_path=r'C:\\api_key.txt'):
+    """
+    Retrieve the API key from a specified file.
+
+    Parameters:
+    file_path (str): The path to the API key file. Default is 'C:\\api_key.txt'.
+
+    Returns:
+    str: The API key as a string, or None if the file is not found or an error occurs.
+
+    Exceptions:
+    FileNotFoundError: If the API key file is not found at the specified path.
+    IOError: If there is an error reading the API key file.
+    """
     logging.info("Retrieving API key.")
     try:
         with open(file_path, 'r') as file:
@@ -41,12 +65,33 @@ def get_api_key(file_path=r'C:\\api_key.txt'):
         return None
 
 def select_file():
+    """
+    Opens a file dialog for the user to select a document for summarization.
+    
+    Returns:
+    str: The file path of the selected document. Supported formats include PDF, DOCX, RTF, and TXT.
+    """
     file_path = filedialog.askopenfilename(
         title="Select a Document",
         filetypes=[("PDF Files", "*.pdf"), ("Word Documents", "*.docx"), ("RTF Files", "*.rtf"), ("Text Files", "*.txt")])
     return file_path
 
 def get_summary_prompt(file_path, api_key):
+    """
+    Generate a summary prompt based on the language of the text in the given file.
+
+    Parameters:
+    file_path (str): The path of the file to summarize.
+    api_key (str): The API key for any external services used.
+
+    Returns:
+    str: A summary prompt in the detected language or the default prompt if language detection fails.
+
+    Description:
+    This function loads the document text using 'file_handler', detects its language,
+    and then either translates the default English prompt to the detected language or returns
+    the default prompt if translation is not required or possible.
+    """
     text = file_handler.load_document(file_path)
     if not text:
         return None
@@ -62,6 +107,16 @@ def get_summary_prompt(file_path, api_key):
 
 # Background Summarization Function
 def start_summarization_thread(root):
+    """
+    Start the summarization process in a separate thread to keep the GUI responsive.
+
+    Parameters:
+    root (tk.Tk): The root window of the application.
+
+    Description:
+    This function creates a new thread to run the summarization process, allowing the GUI
+    to remain responsive and update the progress bar during the summarization.
+    """
     summarization_thread = threading.Thread(target=start_summarization, args=(root,))
     summarization_thread.start()
 
@@ -102,6 +157,15 @@ def start_summarization(root):
         update_progress_bar(0, root)
 
 def update_progress_bar(value, root):
+    """
+    Updates the progress bar in the GUI.
+
+    Parameters:
+    value (int): The value to set the progress bar to.
+    root (tk.Tk): The root window of the application.
+
+    This function is used throughout the summarization process to provide feedback on its progress to the user.
+    """
     def set_progress(value):
         progress['value'] = value
     root.after(0, lambda: set_progress(value))
@@ -127,11 +191,12 @@ def main_gui():
     global selected_file_path, progress, custom_prompt_area, chunk_size, chunk_overlap
 
     logging.info("Initializing GUI for the Document Summarizer.")
+    # Initialize the main window of the application with full-screen size and basic styling.
     root = tk.Tk()
     root.title("Document Summarizer")
     root.state('zoomed')  # Full-screen window
 
-    # Define colors, fonts, and styles for the GUI
+    # Configure styles and colors for the UI components for consistency and readability.
     primary_color = "#2E3F4F"
     secondary_color = "#4F5D75"
     text_color = "#E0FBFC"
@@ -215,6 +280,7 @@ def main_gui():
     root.mainloop()  # This line starts the Tkinter event loop
 
 # Script Execution Block
+# This block is the entry point of the application. It initializes the GUI and starts the application.
 if __name__ == '__main__':
     logging.info("Starting the Document Summarizer application.")
     main_gui()
